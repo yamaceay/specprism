@@ -1,0 +1,37 @@
+site_name: specprism
+site_description: Normalize OpenAPI 3.x specs to a stable IR and diff them as plain YAML. Annotate known changes, surface the rest.
+site_url: https://yamaceay.github.io/specprism/
+repo_url: https://github.com/yamaceay/specprism
+repo_name: specprism
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+  features:
+    - content.code.copy
+    - navigation.top
+    - navigation.sections
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Tutorial: tutorial.md

@@ -1,0 +1,69 @@
+openapi: "3.0.3"
+info:
+  title: Catalog API
+  version: "1.0.0"
+servers:
+  - url: /v1
+components:
+  schemas:
+
+    # --- Used for: note annotation ---
+    Pricing:
+      description: >
+        Either a fixed price or a min/max range.
+      oneOf:
+        - type: object
+          required: [fixed]
+          properties:
+            fixed:
+              type: number
+        - type: object
+          required: [range_min, range_max]
+          properties:
+            range_min:
+              type: number
+            range_max:
+              type: number
+
+    # --- Used for: known_change annotation ---
+    Category:
+      description: Product category.
+      enum:
+        - electronics
+        - books
+
+    # --- Used for: equivalence annotation ---
+    Product:
+      type: object
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          $ref: "#/components/schemas/Pricing"
+        status:
+          type: string
+          description: Availability status. Renamed to availability in v2.
+
+    # --- Used for: suppress annotation ---
+    DebugTrace:
+      type: object
+      description: Internal debug payload. Not part of the public contract.
+      properties:
+        request_id:
+          type: string
+
+paths:
+  /products:
+    get:
+      summary: List products
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"

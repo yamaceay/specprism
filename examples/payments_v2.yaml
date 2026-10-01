@@ -1,0 +1,147 @@
+openapi: "3.0.3"
+info:
+  title: Payments API
+  version: "2.0.0"
+servers:
+  - url: /v1
+components:
+  schemas:
+
+    Money:
+      type: object
+      required: [amount, currency]
+      description: A monetary value with its currency.
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+          description: Decimal amount. Must be greater than zero.
+        currency:
+          type: string
+          description: ISO 4217 currency code (e.g. USD, EUR).
+
+    # v2: merged-fields anti-pattern replaced with a proper discriminated union.
+    # Callers must supply exactly one of: card, bank transfer, or digital wallet.
+    CardPayment:
+      type: object
+      required: [card_number, card_expiry]
+      description: Credit or debit card payment method.
+      properties:
+        card_number:
+          type: string
+          description: 16-digit card number (PCI-masked in responses).
+        card_expiry:
+          type: string
+          description: Expiry date in MM/YY format.
+        cardholder_name:
+          type: string
+          description: Name as it appears on the card. Optional.
+
+    BankTransfer:
+      type: object
+      required: [iban]
+      description: Bank transfer payment method (SEPA or wire).
+      properties:
+        iban:
+          type: string
+          description: International Bank Account Number.
+        bic:
+          type: string
+          description: Bank Identifier Code (SWIFT). Required for international transfers.
+        account_holder:
+          type: string
+          description: Legal name of the account holder.
+
+    DigitalWallet:
+      type: object
+      required: [provider, wallet_id]
+      description: Digital wallet payment method (e.g. PayPal, Apple Pay).
+      properties:
+        provider:
+          type: string
+          description: Wallet provider identifier.
+        wallet_id:
+          type: string
+          description: Provider-assigned wallet identifier.
+
+    PaymentMethod:
+      description: >
+        Payment method. Exactly one format must be provided per payment.
+        Replaces the v1 merged-fields object.
+      oneOf:
+        - $ref: "#/components/schemas/CardPayment"
+        - $ref: "#/components/schemas/BankTransfer"
+        - $ref: "#/components/schemas/DigitalWallet"
+
+    PaymentStatus:
+      description: Lifecycle state of a payment.
+      enum:
+        - completed
+        - disputed
+        - failed
+        - pending
+        - processing
+        - refunded
+
+    Payment:
+      type: object
+      required: [id, amount, method, state, created_at]
+      description: A payment transaction.
+      properties:
+        id:
+          type: string
+          description: Unique payment identifier.
+        amount:
+          $ref: "#/components/schemas/Money"
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        state:
+          $ref: "#/components/schemas/PaymentStatus"
+          description: Renamed from status in v1. Same lifecycle semantics.
+        created_at:
+          type: string
+          description: ISO 8601 timestamp.
+        failure_reason:
+          type: string
+          nullable: true
+          description: Human-readable reason when state is failed or disputed.
+
+    # Internal  -  not part of the public contract.
+    InternalAuditEntry:
+      type: object
+      description: Internal audit log entry. Not exposed to API consumers.
+      properties:
+        request_id:
+          type: string
+        processor_id:
+          type: string
+        latency_ms:
+          type: integer
+        gateway_trace:
+          type: string
+
+paths:
+  /payments:
+    post:
+      summary: Create a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Payment"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+  /payments/{id}:
+    get:
+      summary: Get a payment by ID
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"

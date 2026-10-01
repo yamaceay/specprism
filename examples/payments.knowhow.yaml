@@ -1,0 +1,127 @@
+# payments.knowhow.yaml
+# Know-how annotations for payments_v1.yaml -> payments_v2.yaml diff.
+#
+# Usage:
+#   specprism diff examples/payments_v1.yaml examples/payments_v2.yaml \
+#     --no-descriptions --knowhow examples/payments.knowhow.yaml
+
+version: 2
+
+annotations:
+
+  # ---------------------------------------------------------------------------
+  # kind: note
+  # Explains what a node IS  -  domain context injected as # note: comments.
+  # ---------------------------------------------------------------------------
+
+  - kind: note
+    path: schemas.PaymentMethod
+    note: >
+      v1: merged-fields object where card and bank details coexisted on the
+      same schema. Callers were expected to supply only one set, but the
+      contract was unenforced. v2: replaced with oneOf(CardPayment |
+      BankTransfer | DigitalWallet)  -  exactly one method per payment.
+    sdk_equivalent: PaymentMethod
+
+  - kind: note
+    path: schemas.PaymentMethod.variants[0]
+    note: >
+      CardPayment variant  -  card_number + card_expiry required.
+      cardholder_name is optional.
+    sdk_equivalent: CardPayment
+
+  - kind: note
+    path: schemas.PaymentMethod.variants[1]
+    note: >
+      BankTransfer variant  -  iban required, bic required for international
+      transfers (SWIFT). Covers both SEPA and wire.
+    sdk_equivalent: BankTransfer
+
+  - kind: note
+    path: schemas.PaymentMethod.variants[2]
+    note: >
+      DigitalWallet variant  -  new in v2. Covers PayPal, Apple Pay, Google Pay
+      and similar. provider identifies the wallet; wallet_id is provider-assigned.
+    sdk_equivalent: DigitalWallet
+
+  # ---------------------------------------------------------------------------
+  # kind: known_change
+  # Marks an intentional change with a version range and reason.
+  # Hunks with this marker are explained; hunks without it need investigation.
+  # ---------------------------------------------------------------------------
+
+  - kind: known_change
+    path: schemas.PaymentMethod
+    from_version: "1.0.0"
+    to_version: "2.0.0"
+    reason: >
+      Breaking change. The merged-fields pattern allowed structurally invalid
+      requests (e.g. card_number + iban together) that failed only at runtime.
+      oneOf enforces exactly one payment method at the schema level.
+
+  - kind: known_change
+    path: schemas.PaymentStatus
+    from_version: "1.0.0"
+    to_version: "2.0.0"
+    reason: >
+      Additive change. Two new terminal states: refunded (successful reversal)
+      and disputed (chargeback initiated). Existing values unchanged.
+
+  - kind: known_change
+    path: schemas.Money.properties.amount
+    from_version: "1.0.0"
+    to_version: "2.0.0"
+    reason: >
+      minimum: 0.01 added. Zero-value payments were previously accepted and
+      caused downstream processor errors. Now rejected at validation.
+
+  - kind: known_change
+    path: schemas.Payment.properties.failure_reason
+    from_version: "1.0.0"
+    to_version: "2.0.0"
+    reason: >
+      New optional field. Populated when state is failed or disputed.
+      Provides a human-readable explanation from the payment processor.
+      nullable: true  -  absent on successful payments.
+
+  # ---------------------------------------------------------------------------
+  # kind: equivalence
+  # Documents that two paths mean the same thing across versions.
+  # Adds a # ≡ cross-reference on both sides so reviewers know a field
+  # didn't disappear  -  it was renamed or restructured.
+  # ---------------------------------------------------------------------------
+
+  - kind: equivalence
+    path_a: schemas.Payment.properties.status
+    path_b: schemas.Payment.properties.state
+    note: >
+      status (v1) renamed to state (v2). Same lifecycle values, clearer name
+      that avoids collision with HTTP status terminology.
+
+  - kind: equivalence
+    path_a: schemas.PaymentMethod.properties.card_number
+    path_b: schemas.PaymentMethod.variants[0].properties.card_number
+    note: >
+      card_number migrated from merged PaymentMethod into CardPayment variant.
+      Field semantics unchanged.
+
+  - kind: equivalence
+    path_a: schemas.PaymentMethod.properties.iban
+    path_b: schemas.PaymentMethod.variants[1].properties.iban
+    note: >
+      iban migrated from merged PaymentMethod into BankTransfer variant.
+      Field semantics unchanged.
+
+  # ---------------------------------------------------------------------------
+  # kind: suppress
+  # Drops a path from both IRs before diffing.
+  # A # suppressed tombstone is printed so nothing is hidden silently.
+  # Use for internal schemas that are not part of the public contract.
+  # ---------------------------------------------------------------------------
+
+  - kind: suppress
+    path: schemas.InternalAuditEntry
+    reason: >
+      Internal audit log schema. Not exposed to API consumers. Changes here
+      (e.g. adding latency_ms, gateway_trace) are infrastructure concerns,
+      not contract changes.

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "specprism"
+version = "0.1.0"
+description = "Normalize OpenAPI specs to a stable IR and diff them."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+]
+
+[project.scripts]
+specprism = "openapi_comparator.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openapi_comparator"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7",
+    "mkdocs-material>=9",
+    "mkdocs-include-markdown-plugin>=6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

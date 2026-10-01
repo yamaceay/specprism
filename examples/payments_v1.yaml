@@ -1,0 +1,105 @@
+openapi: "3.0.3"
+info:
+  title: Payments API
+  version: "1.0.0"
+servers:
+  - url: /v1
+components:
+  schemas:
+
+    Money:
+      type: object
+      required: [amount, currency]
+      description: A monetary value with its currency.
+      properties:
+        amount:
+          type: number
+          description: Decimal amount. Must be positive.
+        currency:
+          type: string
+          description: ISO 4217 currency code (e.g. USD, EUR).
+
+    # v1 anti-pattern: card and bank fields merged into one object.
+    # Callers supply either card_number/card_expiry OR iban/bic  -  never both.
+    # This is unenforced at the schema level.
+    PaymentMethod:
+      type: object
+      description: >
+        Payment method details. Either card fields (card_number, card_expiry)
+        or bank fields (iban, bic) must be provided, not both.
+        This mutual exclusion is not enforced by the schema in v1.
+      properties:
+        card_number:
+          type: string
+          description: 16-digit card number (PCI-masked in responses).
+        card_expiry:
+          type: string
+          description: Expiry date in MM/YY format.
+        iban:
+          type: string
+          description: International Bank Account Number.
+        bic:
+          type: string
+          description: Bank Identifier Code (SWIFT).
+
+    PaymentStatus:
+      description: Lifecycle state of a payment.
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+
+    Payment:
+      type: object
+      required: [id, amount, method, status, created_at]
+      description: A payment transaction.
+      properties:
+        id:
+          type: string
+          description: Unique payment identifier.
+        amount:
+          $ref: "#/components/schemas/Money"
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        created_at:
+          type: string
+          description: ISO 8601 timestamp.
+
+    # Internal  -  not part of the public contract.
+    InternalAuditEntry:
+      type: object
+      description: Internal audit log entry. Not exposed to API consumers.
+      properties:
+        request_id:
+          type: string
+        processor_id:
+          type: string
+
+paths:
+  /payments:
+    post:
+      summary: Create a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Payment"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+  /payments/{id}:
+    get:
+      summary: Get a payment by ID
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"

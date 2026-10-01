@@ -1,0 +1,84 @@
+openapi: "3.0.3"
+info:
+  title: Catalog API
+  version: "2.0.0"
+servers:
+  - url: /v1
+components:
+  schemas:
+
+    # --- note: Pricing gained a third variant (discount) ---
+    Pricing:
+      description: >
+        Either a fixed price, a min/max range, or a discounted price.
+      oneOf:
+        - type: object
+          required: [fixed]
+          properties:
+            fixed:
+              type: number
+        - type: object
+          required: [range_min, range_max]
+          properties:
+            range_min:
+              type: number
+            range_max:
+              type: number
+        - type: object
+          required: [original, discount_pct]
+          properties:
+            original:
+              type: number
+            discount_pct:
+              type: number
+              minimum: 0
+              maximum: 100
+
+    # --- known_change: two new enum values added ---
+    Category:
+      description: Product category.
+      enum:
+        - books
+        - clothing
+        - electronics
+        - sports
+
+    # --- equivalence: status renamed to availability ---
+    Product:
+      type: object
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          $ref: "#/components/schemas/Pricing"
+        availability:
+          type: string
+          description: Availability status (renamed from status in v1).
+
+    # --- suppress: internal debug fields added; irrelevant to public contract ---
+    DebugTrace:
+      type: object
+      description: Internal debug payload. Not part of the public contract.
+      properties:
+        request_id:
+          type: string
+        timing_ms:
+          type: integer
+        trace_flags:
+          type: string
+
+paths:
+  /products:
+    get:
+      summary: List products
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"

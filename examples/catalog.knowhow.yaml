@@ -1,0 +1,59 @@
+# catalog.knowhow.yaml
+# Know-how annotations for catalog_v1.yaml -> catalog_v2.yaml diff.
+# Each annotation demonstrates one of the four supported kinds.
+
+version: 2
+
+annotations:
+
+  # ---------------------------------------------------------------------------
+  # kind: note
+  # Explains what a node IS  -  domain context injected as a comment.
+  # Useful for complex types that aren't self-explanatory from the schema alone.
+  # ---------------------------------------------------------------------------
+  - kind: note
+    path: schemas.Pricing
+    note: >
+      oneOf pricing strategy: fixed (single price), range (min/max band),
+      or discounted (original + discount_pct). v2 added the discount variant.
+      SDK: Price union type  -  Fixed | Range | Discounted.
+    sdk_equivalent: Price
+
+  # ---------------------------------------------------------------------------
+  # kind: known_change
+  # Marks a diff hunk as intentional and explained.
+  # Annotated hunks get a "# ✓ known" marker  -  visually separates explained
+  # changes from unexplained ones. Unexplained hunks are the ones to dig into.
+  # ---------------------------------------------------------------------------
+  - kind: known_change
+    path: schemas.Category
+    from_version: "1.0.0"
+    to_version: "2.0.0"
+    reason: >
+      Non-breaking additive change. Two new categories (clothing, sports)
+      added to support the expanded product catalog. Existing values preserved.
+
+  # ---------------------------------------------------------------------------
+  # kind: equivalence
+  # Documents that two paths across versions mean the same thing.
+  # Adds a "# ≡ <other-path>" cross-reference on both sides of the diff,
+  # so reviewers know the field didn't vanish  -  it just moved or was renamed.
+  # ---------------------------------------------------------------------------
+  - kind: equivalence
+    path_a: schemas.Product.properties.status
+    path_b: schemas.Product.properties.availability
+    note: >
+      status (v1) renamed to availability (v2)  -  same semantics, clearer name.
+      SDK: Product.availability in both versions.
+
+  # ---------------------------------------------------------------------------
+  # kind: suppress
+  # Removes a path from both IRs before diffing.
+  # Use for internal/debug schemas that are not part of the public contract.
+  # A "# suppressed" tombstone is still printed so nothing is hidden silently.
+  # ---------------------------------------------------------------------------
+  - kind: suppress
+    path: schemas.DebugTrace
+    reason: >
+      Internal debug payload. Not part of the public API contract.
+      Changes here are irrelevant to consumers.
